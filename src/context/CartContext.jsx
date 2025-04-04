@@ -1,66 +1,88 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { getCart, addToCart, removeFromCart, clearCart, checkout } from '../api/cartApi';
+import { startHealthCheck, isBackendAvailable } from '../utils/backendHealth';
 import { toast } from 'react-hot-toast';
 
 const CartContext = createContext();
 
-export const useCart = () => useContext(CartContext);
-
-export const CartProvider = ({ children }) => {
+export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isOffline, setIsOffline] = useState(false);
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
-  // Load cart when user logs in
   useEffect(() => {
     if (currentUser) {
       fetchCart();
     } else {
       setCart([]);
+      setLoading(false);
     }
+
+    // Start health check
+    const cleanup = startHealthCheck();
+    return cleanup;
   }, [currentUser]);
 
   const fetchCart = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await getCart();
+      
       if (response.success) {
-        setCart(response.cart);
+        setCart(response.cart || []);
+        setIsOffline(response.isOffline || false);
+        if (response.isOffline) {
+          toast('Working in offline mode. Changes will sync when the server is available.', {
+            icon: '⚠️',
+            duration: 5000,
+          });
+        }
       } else {
-        toast.error('Failed to fetch cart');
+        setError(response.error);
+        toast.error(response.error);
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
-      toast.error('Error loading cart');
+      setError('Failed to load cart. Please try again.');
+      toast.error('Failed to load cart. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const addPetToCart = async (petId) => {
-    if (!currentUser) {
-      toast.error('Please login to add pets to cart');
-      navigate('/auth');
-      return false;
-    }
-
     try {
       setLoading(true);
+      setError(null);
       const response = await addToCart(petId);
+      
       if (response.success) {
-        setCart(response.cart);
-        toast.success('Pet added to cart');
+        setCart(response.cart || []);
+        setIsOffline(response.isOffline || false);
+        if (response.isOffline) {
+          toast('Added to cart (offline mode). Changes will sync when the server is available.', {
+            icon: '⚠️',
+            duration: 5000,
+          });
+        } else {
+          toast.success('Pet added to cart');
+        }
         return true;
       } else {
-        toast.error(response.error || 'Failed to add pet to cart');
+        setError(response.error);
+        toast.error(response.error);
         return false;
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error('Error adding pet to cart');
+      setError('Failed to add to cart. Please try again.');
+      toast.error('Failed to add to cart. Please try again.');
       return false;
     } finally {
       setLoading(false);
@@ -70,85 +92,114 @@ export const CartProvider = ({ children }) => {
   const removePetFromCart = async (petId) => {
     try {
       setLoading(true);
+      setError(null);
       const response = await removeFromCart(petId);
+      
       if (response.success) {
-        setCart(response.cart);
-        toast.success('Pet removed from cart');
-        return true;
+        setCart(response.cart || []);
+        setIsOffline(response.isOffline || false);
+        if (response.isOffline) {
+          toast('Removed from cart (offline mode). Changes will sync when the server is available.', {
+            icon: '⚠️',
+            duration: 5000,
+          });
+        } else {
+          toast.success('Pet removed from cart');
+        }
       } else {
-        toast.error(response.error || 'Failed to remove pet from cart');
-        return false;
+        setError(response.error);
+        toast.error(response.error);
       }
     } catch (error) {
       console.error('Error removing from cart:', error);
-      toast.error('Error removing pet from cart');
-      return false;
+      setError('Failed to remove from cart. Please try again.');
+      toast.error('Failed to remove from cart. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const clearCartItems = async () => {
+  const clearUserCart = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await clearCart();
+      
       if (response.success) {
         setCart([]);
-        toast.success('Cart cleared');
-        return true;
+        setIsOffline(response.isOffline || false);
+        if (response.isOffline) {
+          toast('Cart cleared (offline mode). Changes will sync when the server is available.', {
+            icon: '⚠️',
+            duration: 5000,
+          });
+        } else {
+          toast.success('Cart cleared successfully');
+        }
       } else {
-        toast.error(response.error || 'Failed to clear cart');
-        return false;
+        setError(response.error);
+        toast.error(response.error);
       }
     } catch (error) {
       console.error('Error clearing cart:', error);
-      toast.error('Error clearing cart');
-      return false;
+      setError('Failed to clear cart. Please try again.');
+      toast.error('Failed to clear cart. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const processCheckout = async () => {
-    if (cart.length === 0) {
-      toast.error('Your cart is empty');
-      return false;
+    if (!isBackendAvailable()) {
+      toast.error('Cannot process checkout while offline. Please try again when the server is available.');
+      return;
     }
 
     try {
       setLoading(true);
+      setError(null);
       const response = await checkout();
+      
       if (response.success) {
         setCart([]);
         toast.success('Checkout successful!');
         navigate('/orders');
-        return true;
       } else {
-        toast.error(response.error || 'Checkout failed');
-        return false;
+        setError(response.error);
+        toast.error(response.error);
       }
     } catch (error) {
       console.error('Error during checkout:', error);
-      toast.error('Error processing checkout');
-      return false;
+      setError('Failed to process checkout. Please try again.');
+      toast.error('Failed to process checkout. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const value = {
-    cart,
-    loading,
-    addPetToCart,
-    removePetFromCart,
-    clearCartItems,
-    processCheckout,
-    cartCount: cart.length
-  };
-
   return (
-    <CartContext.Provider value={value}>
+    <CartContext.Provider
+      value={{
+        cart,
+        loading,
+        error,
+        isOffline,
+        addPetToCart,
+        removePetFromCart,
+        clearUserCart,
+        processCheckout,
+        fetchCart
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
-}; 
+}
+
+export function useCart() {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
+} 
