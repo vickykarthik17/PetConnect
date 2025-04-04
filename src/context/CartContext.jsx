@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { getCart, addToCart, removeFromCart, clearCart, checkout } from '../api/cartApi';
-import { startHealthCheck, isBackendAvailable } from '../utils/backendHealth';
+import { startHealthCheck, isBackendAvailable, getConnectionStatus } from '../utils/backendHealth';
 import { toast } from 'react-hot-toast';
 
 const CartContext = createContext();
@@ -23,22 +23,43 @@ export function CartProvider({ children }) {
       setLoading(false);
     }
 
-    // Start health check
+    // Start health check and get cleanup function
     const cleanup = startHealthCheck();
     return cleanup;
   }, [currentUser]);
+
+  const getErrorDetails = (status) => {
+    if (!status.lastError) return '';
+    
+    const { message, code, status: errorStatus } = status.lastError;
+    let details = '';
+    
+    if (code === 'ECONNABORTED') {
+      details = 'Connection timed out. The server may be down or unreachable.';
+    } else if (errorStatus === 0) {
+      details = 'Network error. Please check your internet connection.';
+    } else {
+      details = message;
+    }
+    
+    return ` (${details})`;
+  };
 
   const fetchCart = async () => {
     try {
       setLoading(true);
       setError(null);
+      
       const response = await getCart();
       
       if (response.success) {
         setCart(response.cart || []);
         setIsOffline(response.isOffline || false);
+        
         if (response.isOffline) {
-          toast('Working in offline mode. Changes will sync when the server is available.', {
+          const status = getConnectionStatus();
+          const errorDetails = getErrorDetails(status);
+          toast(`Working in offline mode${errorDetails}. Last check: ${status.lastCheck ? new Date(status.lastCheck).toLocaleTimeString() : 'never'}`, {
             icon: '⚠️',
             duration: 5000,
           });
@@ -49,8 +70,10 @@ export function CartProvider({ children }) {
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
-      setError('Failed to load cart. Please try again.');
-      toast.error('Failed to load cart. Please try again.');
+      const status = getConnectionStatus();
+      const errorDetails = getErrorDetails(status);
+      setError(`Failed to load cart${errorDetails}`);
+      toast.error(`Failed to load cart${errorDetails}`);
     } finally {
       setLoading(false);
     }
@@ -60,13 +83,17 @@ export function CartProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
+      
       const response = await addToCart(petId);
       
       if (response.success) {
         setCart(response.cart || []);
         setIsOffline(response.isOffline || false);
+        
         if (response.isOffline) {
-          toast('Added to cart (offline mode). Changes will sync when the server is available.', {
+          const status = getConnectionStatus();
+          const errorDetails = getErrorDetails(status);
+          toast(`Added to cart (offline mode${errorDetails}). Changes will sync when the server is available.`, {
             icon: '⚠️',
             duration: 5000,
           });
@@ -81,8 +108,10 @@ export function CartProvider({ children }) {
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      setError('Failed to add to cart. Please try again.');
-      toast.error('Failed to add to cart. Please try again.');
+      const status = getConnectionStatus();
+      const errorDetails = getErrorDetails(status);
+      setError(`Failed to add to cart${errorDetails}`);
+      toast.error(`Failed to add to cart${errorDetails}`);
       return false;
     } finally {
       setLoading(false);
@@ -93,13 +122,17 @@ export function CartProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
+      
       const response = await removeFromCart(petId);
       
       if (response.success) {
         setCart(response.cart || []);
         setIsOffline(response.isOffline || false);
+        
         if (response.isOffline) {
-          toast('Removed from cart (offline mode). Changes will sync when the server is available.', {
+          const status = getConnectionStatus();
+          const errorDetails = getErrorDetails(status);
+          toast(`Removed from cart (offline mode${errorDetails}). Changes will sync when the server is available.`, {
             icon: '⚠️',
             duration: 5000,
           });
@@ -112,8 +145,10 @@ export function CartProvider({ children }) {
       }
     } catch (error) {
       console.error('Error removing from cart:', error);
-      setError('Failed to remove from cart. Please try again.');
-      toast.error('Failed to remove from cart. Please try again.');
+      const status = getConnectionStatus();
+      const errorDetails = getErrorDetails(status);
+      setError(`Failed to remove from cart${errorDetails}`);
+      toast.error(`Failed to remove from cart${errorDetails}`);
     } finally {
       setLoading(false);
     }
@@ -123,13 +158,17 @@ export function CartProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
+      
       const response = await clearCart();
       
       if (response.success) {
         setCart([]);
         setIsOffline(response.isOffline || false);
+        
         if (response.isOffline) {
-          toast('Cart cleared (offline mode). Changes will sync when the server is available.', {
+          const status = getConnectionStatus();
+          const errorDetails = getErrorDetails(status);
+          toast(`Cart cleared (offline mode${errorDetails}). Changes will sync when the server is available.`, {
             icon: '⚠️',
             duration: 5000,
           });
@@ -142,8 +181,10 @@ export function CartProvider({ children }) {
       }
     } catch (error) {
       console.error('Error clearing cart:', error);
-      setError('Failed to clear cart. Please try again.');
-      toast.error('Failed to clear cart. Please try again.');
+      const status = getConnectionStatus();
+      const errorDetails = getErrorDetails(status);
+      setError(`Failed to clear cart${errorDetails}`);
+      toast.error(`Failed to clear cart${errorDetails}`);
     } finally {
       setLoading(false);
     }
@@ -151,13 +192,16 @@ export function CartProvider({ children }) {
 
   const processCheckout = async () => {
     if (!isBackendAvailable()) {
-      toast.error('Cannot process checkout while offline. Please try again when the server is available.');
+      const status = getConnectionStatus();
+      const errorDetails = getErrorDetails(status);
+      toast.error(`Cannot process checkout while offline${errorDetails}. Last check: ${status.lastCheck ? new Date(status.lastCheck).toLocaleTimeString() : 'never'}`);
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
+      
       const response = await checkout();
       
       if (response.success) {
@@ -170,8 +214,10 @@ export function CartProvider({ children }) {
       }
     } catch (error) {
       console.error('Error during checkout:', error);
-      setError('Failed to process checkout. Please try again.');
-      toast.error('Failed to process checkout. Please try again.');
+      const status = getConnectionStatus();
+      const errorDetails = getErrorDetails(status);
+      setError(`Failed to process checkout${errorDetails}`);
+      toast.error(`Failed to process checkout${errorDetails}`);
     } finally {
       setLoading(false);
     }
