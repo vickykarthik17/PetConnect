@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { registerUser as apiRegister, loginUser as apiLogin, logoutUser as apiLogout, getCurrentUser as apiGetCurrentUser, updateUserProfile as apiUpdateProfile } from '../api/userApi';
-import { registerPet as apiRegisterPet, getUserPets as apiGetUserPets, getAllPets as apiGetAllPets } from '../api/petApi';
+import { registerUser as apiRegister, loginUser as apiLogin, logoutUser as apiLogout } from '../api/userApi';
+import { registerPet, getUserPets, getAllPets } from '../api/petApi';
 
 const AuthContext = createContext();
 
@@ -24,54 +24,88 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const register = async (userData) => {
-    const result = await apiRegister(userData);
-    if (result.success) {
-      setCurrentUser(result.user);
-      setToken(result.token);
+    try {
+      setLoading(true);
+      
+      // Validate required fields
+      if (!userData.username || !userData.email || !userData.password) {
+        return {
+          success: false,
+          error: 'Please fill in all required fields'
+        };
+      }
+
+      const result = await apiRegister(userData);
+      console.log('Registration result in AuthContext:', result);
+      
+      if (result.success) {
+        // Store user data in localStorage
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
+        localStorage.setItem('token', result.token);
+        
+        // Update context state
+        setCurrentUser(result.user);
+        setToken(result.token);
+        
+        return result;
+      }
+      
+      return {
+        success: false,
+        error: result.error
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Registration failed'
+      };
+    } finally {
+      setLoading(false);
     }
-    return result;
   };
 
-  const login = async (email, password) => {
-    const result = await apiLogin(email, password);
-    if (result.success) {
-      setCurrentUser(result.user);
-      setToken(result.token);
+  const login = async (credentials) => {
+    try {
+      setLoading(true);
+      
+      // Validate required fields
+      if (!credentials.username || !credentials.password) {
+        return {
+          success: false,
+          error: 'Please provide both username and password'
+        };
+      }
+
+      const result = await apiLogin(credentials);
+      console.log('Login result:', { ...result, token: result.token ? '[REDACTED]' : null });
+      
+      if (result.success) {
+        // Store user data in localStorage
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
+        localStorage.setItem('token', result.token);
+        
+        // Update context state
+        setCurrentUser(result.user);
+        setToken(result.token);
+      }
+      return result;
+    } catch (error) {
+      console.error('Login error in context:', error);
+      return {
+        success: false,
+        error: error.message || 'Login failed'
+      };
+    } finally {
+      setLoading(false);
     }
-    return result;
   };
 
   const logout = () => {
     apiLogout();
     setCurrentUser(null);
     setToken(null);
-    return { success: true };
-  };
-
-  const registerPet = async (petData) => {
-    return await apiRegisterPet(petData);
-  };
-
-  const getUserPets = async () => {
-    return await apiGetUserPets();
-  };
-
-  const getAllPets = async () => {
-    return await apiGetAllPets();
-  };
-
-  const updateUserProfile = async (profileData) => {
-    try {
-      const result = await apiUpdateProfile(profileData);
-      if (result.success) {
-        setCurrentUser(result.user);
-        localStorage.setItem('currentUser', JSON.stringify(result.user));
-        return { success: true };
-      }
-      return { success: false, error: result.error };
-    } catch (error) {
-      return { success: false, error: 'Failed to update profile' };
-    }
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('token');
   };
 
   const value = {
@@ -83,8 +117,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     registerPet,
     getUserPets,
-    getAllPets,
-    updateUserProfile
+    getAllPets
   };
 
   return (

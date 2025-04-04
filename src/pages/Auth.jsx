@@ -8,13 +8,13 @@ export function Auth() {
   const [step, setStep] = useState(1);
   const [authType, setAuthType] = useState('login');
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
     phone: '',
     address: '',
-    userType: 'adopter', // 'adopter', 'seller', or 'both'
+    userType: 'adopter',
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,8 +54,8 @@ export function Auth() {
     
     if (currentStep === 1) {
       if (authType === 'signup') {
-        if (!formData.name.trim()) newErrors.name = 'Name is required';
-        else if (formData.name.length < 2) newErrors.name = 'Name must be at least 2 characters';
+        if (!formData.username.trim()) newErrors.username = 'Username is required';
+        else if (formData.username.length < 2) newErrors.username = 'Username must be at least 2 characters';
       }
       
       if (!formData.email.trim()) newErrors.email = 'Email is required';
@@ -121,7 +121,11 @@ export function Auth() {
     
     try {
       if (authType === 'login') {
-        const result = await login(formData.email, formData.password);
+        const loginData = {
+          username: formData.email,
+          password: formData.password
+        };
+        const result = await login(loginData);
         if (result.success) {
           toast.success('Login successful!');
           navigate('/dashboard');
@@ -140,13 +144,34 @@ export function Auth() {
           setIsSubmitting(false);
           return;
         }
+
+        // Validate required fields before submission
+        if (!formData.username?.trim() || !formData.email?.trim() || !formData.password?.trim()) {
+          toast.error('Please fill in all required fields');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Create registration data object
+        const registrationData = {
+          username: formData.username.trim(),
+          email: formData.email.trim(),
+          password: formData.password
+        };
         
-        const result = await register(formData);
+        const result = await register(registrationData);
+        console.log('Registration result:', { ...result, token: result.token ? '[REDACTED]' : null });
+        
         if (result.success) {
           toast.success('Registration successful!');
           navigate('/dashboard');
         } else {
           toast.error(result.error || 'Registration failed');
+          // If username/email exists error, go back to step 1
+          if (result.error?.toLowerCase().includes('username already exists') || 
+              result.error?.toLowerCase().includes('email already exists')) {
+            setStep(1);
+          }
         }
       }
     } catch (error) {
@@ -183,22 +208,22 @@ export function Auth() {
     <>
       {authType === 'signup' && (
         <div className="mb-4">
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-            Full Name
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            Username
           </label>
           <input
             type="text"
-            id="name"
-            name="name"
-            value={formData.name}
+            id="username"
+            name="username"
+            value={formData.username}
             onChange={handleInputChange}
-            className={`mt-1 block w-full rounded-md border ${errors.name ? 'border-red-500' : 'border-gray-300'} px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500`}
-            placeholder="Enter your full name"
+            className={`mt-1 block w-full rounded-md border ${errors.username ? 'border-red-500' : 'border-gray-300'} px-3 py-2 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500`}
+            placeholder="Choose a username"
           />
-          {errors.name && (
+          {errors.username && (
             <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
               <AlertCircle className="w-4 h-4" />
-              {errors.name}
+              {errors.username}
             </p>
           )}
         </div>
@@ -385,7 +410,7 @@ export function Auth() {
       <div className="mb-6">
         <h3 className="text-sm font-medium text-gray-700 mb-2">Account Summary:</h3>
         <div className="bg-gray-50 p-4 rounded-md">
-          <p className="text-sm text-gray-600"><span className="font-medium">Name:</span> {formData.name}</p>
+          <p className="text-sm text-gray-600"><span className="font-medium">Username:</span> {formData.username}</p>
           <p className="text-sm text-gray-600"><span className="font-medium">Email:</span> {formData.email}</p>
           <p className="text-sm text-gray-600"><span className="font-medium">Phone:</span> {formData.phone}</p>
           <p className="text-sm text-gray-600"><span className="font-medium">Address:</span> {formData.address}</p>

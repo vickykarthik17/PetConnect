@@ -69,12 +69,12 @@ export default function Navbar() {
               <div className="relative group">
                 <button className="flex items-center space-x-1 text-gray-700 hover:text-orange-500">
                   <User size={20} />
-                  <span className="text-sm hidden sm:inline">{currentUser.name.split(' ')[0]}</span>
+                  <span className="text-sm hidden sm:inline">{currentUser.username}</span>
                 </button>
                 
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden group-hover:block">
                   <div className="px-4 py-2 text-sm text-gray-700 border-b">
-                    Signed in as <span className="font-medium">{currentUser.email}</span>
+                    Signed in as <span className="font-medium">{currentUser.username}</span>
                   </div>
                   <Link to="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dashboard</Link>
                   <Link to="/register-pet" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Register a Pet</Link>

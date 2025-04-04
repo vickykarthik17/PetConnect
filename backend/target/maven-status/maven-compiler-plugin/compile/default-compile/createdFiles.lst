@@ -11,6 +11,7 @@ com\example\petmanagement\config\WebConfig.class
 com\example\petmanagement\repository\UserRepository.class
 com\example\petmanagement\dto\AuthRequest.class
 com\example\petmanagement\service\UserService.class
+com\example\petmanagement\config\CorsConfig.class
 com\example\petmanagement\config\PasswordConfig.class
 com\example\petmanagement\controller\PetController.class
 com\example\petmanagement\config\SecurityConfig.class

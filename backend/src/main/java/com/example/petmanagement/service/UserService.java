@@ -26,14 +26,25 @@ public class UserService implements UserDetailsService {
     }
 
     public User registerUser(User user) {
+        // Check if username exists
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
             throw new RuntimeException("Username already exists");
         }
+        
+        // Check if email exists
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new RuntimeException("Email already exists");
         }
         
+        // Set default role if not provided
+        if (user.getRole() == null || user.getRole().trim().isEmpty()) {
+            user.setRole("USER");
+        }
+        
+        // Encode password
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+        
+        // Save user
         return userRepository.save(user);
     }
 
@@ -44,6 +55,10 @@ public class UserService implements UserDetailsService {
 
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
+
+    public long getUserCount() {
+        return userRepository.count();
     }
 } 

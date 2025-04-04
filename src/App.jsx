@@ -15,6 +15,7 @@ import Volunteer from './pages/Volunteer';
 import AboutUs from './pages/AboutUs';
 import Contact from './pages/Contact';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import { Toaster } from 'react-hot-toast';
 
 // Protected route component
@@ -60,40 +61,42 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="min-h-screen flex flex-col bg-gray-50">
-          <Header />
-          <Navbar />
-          <main className="flex-grow container mx-auto px-4 py-8">
-            <AppRoutes />
-          </main>
-          <Footer />
-        </div>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#333',
-              color: '#fff',
-            },
-            success: {
+    <Router>
+      <AuthProvider>
+        <CartProvider>
+          <div className="min-h-screen flex flex-col bg-gray-50">
+            <Header />
+            <Navbar />
+            <main className="flex-grow container mx-auto px-4 py-8">
+              <AppRoutes />
+            </main>
+            <Footer />
+          </div>
+          <Toaster
+            position="top-right"
+            toastOptions={{
               duration: 3000,
-              theme: {
-                primary: '#4aed88',
+              style: {
+                background: '#333',
+                color: '#fff',
               },
-            },
-            error: {
-              duration: 4000,
-              theme: {
-                primary: '#ff4b4b',
+              success: {
+                duration: 3000,
+                theme: {
+                  primary: '#4aed88',
+                },
               },
-            },
-          }}
-        />
-      </Router>
-    </AuthProvider>
+              error: {
+                duration: 4000,
+                theme: {
+                  primary: '#ff4b4b',
+                },
+              },
+            }}
+          />
+        </CartProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
