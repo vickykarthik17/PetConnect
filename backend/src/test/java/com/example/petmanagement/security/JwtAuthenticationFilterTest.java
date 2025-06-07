@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,7 +15,7 @@ class JwtAuthenticationFilterTest {
 
     private JwtAuthenticationFilter jwtAuthenticationFilter;
     private JwtTokenProvider jwtTokenProvider;
-    private UserDetailsService userDetailsService;
+    private CustomUserDetailsService userDetailsService;
     private HttpServletRequest request;
     private HttpServletResponse response;
     private FilterChain filterChain;
@@ -25,7 +24,7 @@ class JwtAuthenticationFilterTest {
     @BeforeEach
     void setUp() {
         jwtTokenProvider = mock(JwtTokenProvider.class);
-        userDetailsService = mock(UserDetailsService.class);
+        userDetailsService = mock(CustomUserDetailsService.class);
         request = mock(HttpServletRequest.class);
         response = mock(HttpServletResponse.class);
         filterChain = mock(FilterChain.class);

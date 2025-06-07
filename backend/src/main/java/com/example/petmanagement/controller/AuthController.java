@@ -1,23 +1,27 @@
 package com.example.petmanagement.controller;
 
 import com.example.petmanagement.dto.AuthRequest;
-import com.example.petmanagement.dto.AuthResponse;
+import com.example.petmanagement.dto.RegisterRequest;
 import com.example.petmanagement.model.User;
 import com.example.petmanagement.security.JwtTokenProvider;
 import com.example.petmanagement.service.UserService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
@@ -31,88 +35,115 @@ public class AuthController {
     private JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request) {
         try {
-            logger.debug("Login attempt for user: {}", request.getUsername());
+            logger.info("Login attempt for email: {}", request.getEmail());
+            
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
 
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            String token = jwtTokenProvider.generateToken(userDetails);
-            User user = userService.findByUsername(userDetails.getUsername());
-            logger.debug("Login successful for user: {}", user.getUsername());
+            String token = jwtTokenProvider.generateToken(authentication);
+            User user = userService.findByEmail(request.getEmail());
 
-            return ResponseEntity.ok(new AuthResponse(token, user.getUsername(), user.getRole()));
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            response.put("user", user);
+            response.put("status", "success");
+
+            logger.info("Login successful for email: {}", request.getEmail());
+            return ResponseEntity.ok(response);
+
+        } catch (BadCredentialsException e) {
+            logger.error("Invalid credentials for email: {}", request.getEmail());
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Invalid email or password",
+                "status", "error"
+            ));
         } catch (Exception e) {
-            logger.error("Login failed for user: {}", request.getUsername(), e);
-            return ResponseEntity.badRequest().body(new AuthResponse(null, null, null, e.getMessage()));
+            logger.error("Login failed for email: " + request.getEmail(), e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Login failed: " + e.getMessage(),
+                "status", "error"
+            ));
         }
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
-            logger.debug("Received registration request for user: {}", user.getUsername());
-            logger.debug("Registration payload: username={}, email={}, role={}", 
-                user.getUsername(), 
-                user.getEmail(), 
-                user.getRole()
+            logger.info("Registration attempt for email: {}", request.getEmail());
+
+            // Check if email exists
+            if (userService.existsByEmail(request.getEmail())) {
+                logger.warn("Registration failed - email already exists: {}", request.getEmail());
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Email already exists",
+                    "status", "error"
+                ));
+            }
+
+            // Create new user
+            User user = new User();
+            user.setEmail(request.getEmail());
+            user.setUsername(request.getUsername());
+            user.setPassword(request.getPassword());
+
+            User savedUser = userService.registerUser(user);
+
+            // Generate token
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
-            
-            // Check if username already exists
-            try {
-                if (userService.findByUsername(user.getUsername()) != null) {
-                    logger.debug("Registration failed - username already exists: {}", user.getUsername());
-                    return ResponseEntity.badRequest().body(new AuthResponse(null, null, null, "Username already exists"));
-                }
-            } catch (UsernameNotFoundException e) {
-                // This is actually good - it means the username is available
-                logger.debug("Username is available: {}", user.getUsername());
-            }
-            
-            // Check if email already exists
-            try {
-                if (userService.findByEmail(user.getEmail()) != null) {
-                    logger.debug("Registration failed - email already exists: {}", user.getEmail());
-                    return ResponseEntity.badRequest().body(new AuthResponse(null, null, null, "Email already exists"));
-                }
-            } catch (Exception e) {
-                // This is good - it means the email is available
-                logger.debug("Email is available: {}", user.getEmail());
-            }
+            String token = jwtTokenProvider.generateToken(authentication);
 
-            // Set default role if not provided
-            if (user.getRole() == null || user.getRole().trim().isEmpty()) {
-                user.setRole("USER");
-                logger.debug("Setting default role 'USER' for new registration");
-            }
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            response.put("user", savedUser);
+            response.put("status", "success");
 
-            // Register the user
-            User registeredUser = userService.registerUser(user);
-            logger.debug("User registered successfully: {}", registeredUser.getUsername());
-            
-            // Generate token for the new user
-            String token = jwtTokenProvider.generateToken(registeredUser);
-            logger.debug("JWT token generated for new user: {}", registeredUser.getUsername());
-            
-            return ResponseEntity.ok(new AuthResponse(token, registeredUser.getUsername(), registeredUser.getRole()));
+            logger.info("Registration successful for email: {}", savedUser.getEmail());
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            logger.error("Registration failed for user: {}", user.getUsername(), e);
-            return ResponseEntity.badRequest().body(new AuthResponse(null, null, null, e.getMessage()));
+            logger.error("Registration failed for email: " + request.getEmail(), e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Registration failed: " + e.getMessage(),
+                "status", "error"
+            ));
         }
     }
 
-    @GetMapping("/test-db")
-    public ResponseEntity<?> testDbConnection() {
+    @GetMapping("/validate")
+    public ResponseEntity<?> validateToken(@RequestHeader("Authorization") String token) {
         try {
-            logger.debug("Testing database connection");
-            long userCount = userService.getUserCount();
-            logger.debug("Database connection successful. User count: {}", userCount);
-            return ResponseEntity.ok("Database connection successful. User count: " + userCount);
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+
+            if (jwtTokenProvider.validateToken(token)) {
+                String email = jwtTokenProvider.extractUsername(token);
+                User user = userService.findByEmail(email);
+
+                return ResponseEntity.ok(Map.of(
+                    "valid", true,
+                    "user", user,
+                    "status", "success"
+                ));
+            }
+
+            return ResponseEntity.badRequest().body(Map.of(
+                "valid", false,
+                "error", "Invalid token",
+                "status", "error"
+            ));
         } catch (Exception e) {
-            logger.error("Database connection test failed", e);
-            return ResponseEntity.badRequest().body("Database connection failed: " + e.getMessage());
+            logger.error("Token validation failed", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "valid", false,
+                "error", "Token validation failed",
+                "status", "error"
+            ));
         }
     }
 } 

@@ -1,32 +1,68 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import { loadStripe } from '@stripe/stripe-js';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { getCart, addToCart, removeFromCart, clearCart, checkout } from '../api/cartApi';
 import { startHealthCheck, isBackendAvailable, getConnectionStatus } from '../utils/backendHealth';
-import { toast } from 'react-hot-toast';
 
 const CartContext = createContext();
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-export function CartProvider({ children }) {
+export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (currentUser) {
-      fetchCart();
-    } else {
-      setCart([]);
-      setLoading(false);
-    }
+    let mounted = true;
+    
+    const initializeCart = async () => {
+      if (currentUser) {
+        try {
+          await fetchCart();
+        } catch (error) {
+          console.error('Failed to initialize cart:', error);
+        }
+      } else {
+        setCart([]);
+        setLoading(false);
+      }
+    };
 
     // Start health check and get cleanup function
     const cleanup = startHealthCheck();
-    return cleanup;
+    initializeCart();
+
+    return () => {
+      mounted = false;
+      cleanup();
+    };
   }, [currentUser]);
+
+  // Add automatic retry for fetchCart
+  useEffect(() => {
+    let retryTimeout;
+
+    if (error && retryCount < 3) {
+      retryTimeout = setTimeout(() => {
+        console.log(`Retrying cart fetch (attempt ${retryCount + 1})...`);
+        setRetryCount(prev => prev + 1);
+        fetchCart();
+      }, Math.pow(2, retryCount) * 1000); // Exponential backoff
+    }
+
+    return () => {
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+    };
+  }, [error, retryCount]);
 
   const getErrorDetails = (status) => {
     if (!status.lastError) return '';
@@ -35,9 +71,13 @@ export function CartProvider({ children }) {
     let details = '';
     
     if (code === 'ECONNABORTED') {
-      details = 'Connection timed out. The server may be down or unreachable.';
+      details = 'Connection timed out. Please check if the backend server is running.';
+    } else if (code === 'ECONNREFUSED') {
+      details = 'Cannot connect to the backend server. Please ensure it is running.';
     } else if (errorStatus === 0) {
       details = 'Network error. Please check your internet connection.';
+    } else if (errorStatus === 404) {
+      details = 'Backend API endpoint not found. Please check the server configuration.';
     } else {
       details = message;
     }
@@ -79,148 +119,107 @@ export function CartProvider({ children }) {
     }
   };
 
-  const addPetToCart = async (petId) => {
+  const addPetToCart = async (pet) => {
+    if (!currentUser) {
+      toast.error('Please log in to add pets to cart');
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
+
     try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await addToCart(petId);
-      
+      setIsProcessing(true);
+      const response = await addToCart(pet.id);
       if (response.success) {
-        setCart(response.cart || []);
-        setIsOffline(response.isOffline || false);
-        
-        if (response.isOffline) {
-          const status = getConnectionStatus();
-          const errorDetails = getErrorDetails(status);
-          toast(`Added to cart (offline mode${errorDetails}). Changes will sync when the server is available.`, {
-            icon: '⚠️',
-            duration: 5000,
-          });
-        } else {
-          toast.success('Pet added to cart');
-        }
-        return true;
+        setCart(response.cart);
+        toast.success('Pet added to cart successfully!');
+        navigate('/cart');
       } else {
-        setError(response.error);
-        toast.error(response.error);
-        return false;
+        toast.error(response.error || 'Failed to add pet to cart');
       }
     } catch (error) {
-      console.error('Error adding to cart:', error);
-      const status = getConnectionStatus();
-      const errorDetails = getErrorDetails(status);
-      setError(`Failed to add to cart${errorDetails}`);
-      toast.error(`Failed to add to cart${errorDetails}`);
-      return false;
+      console.error('Error adding pet to cart:', error);
+      toast.error('Failed to add pet to cart');
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
   };
 
   const removePetFromCart = async (petId) => {
     try {
-      setLoading(true);
-      setError(null);
-      
+      setIsProcessing(true);
       const response = await removeFromCart(petId);
-      
       if (response.success) {
-        setCart(response.cart || []);
-        setIsOffline(response.isOffline || false);
-        
-        if (response.isOffline) {
-          const status = getConnectionStatus();
-          const errorDetails = getErrorDetails(status);
-          toast(`Removed from cart (offline mode${errorDetails}). Changes will sync when the server is available.`, {
-            icon: '⚠️',
-            duration: 5000,
-          });
-        } else {
-          toast.success('Pet removed from cart');
-        }
+        setCart(response.cart);
+        toast.success('Pet removed from cart');
       } else {
-        setError(response.error);
-        toast.error(response.error);
+        toast.error(response.error || 'Failed to remove pet from cart');
       }
     } catch (error) {
-      console.error('Error removing from cart:', error);
-      const status = getConnectionStatus();
-      const errorDetails = getErrorDetails(status);
-      setError(`Failed to remove from cart${errorDetails}`);
-      toast.error(`Failed to remove from cart${errorDetails}`);
+      console.error('Error removing pet from cart:', error);
+      toast.error('Failed to remove pet from cart');
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
   };
 
   const clearUserCart = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      
+      setIsProcessing(true);
       const response = await clearCart();
-      
       if (response.success) {
         setCart([]);
-        setIsOffline(response.isOffline || false);
-        
-        if (response.isOffline) {
-          const status = getConnectionStatus();
-          const errorDetails = getErrorDetails(status);
-          toast(`Cart cleared (offline mode${errorDetails}). Changes will sync when the server is available.`, {
-            icon: '⚠️',
-            duration: 5000,
-          });
-        } else {
-          toast.success('Cart cleared successfully');
-        }
+        toast.success('Cart cleared successfully');
       } else {
-        setError(response.error);
-        toast.error(response.error);
+        toast.error(response.error || 'Failed to clear cart');
       }
     } catch (error) {
       console.error('Error clearing cart:', error);
-      const status = getConnectionStatus();
-      const errorDetails = getErrorDetails(status);
-      setError(`Failed to clear cart${errorDetails}`);
-      toast.error(`Failed to clear cart${errorDetails}`);
+      toast.error('Failed to clear cart');
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
   };
 
   const processCheckout = async () => {
-    if (!isBackendAvailable()) {
-      const status = getConnectionStatus();
-      const errorDetails = getErrorDetails(status);
-      toast.error(`Cannot process checkout while offline${errorDetails}. Last check: ${status.lastCheck ? new Date(status.lastCheck).toLocaleTimeString() : 'never'}`);
+    if (!currentUser) {
+      toast.error('Please log in to checkout');
+      navigate('/login', { state: { from: '/cart' } });
       return;
     }
 
     try {
-      setLoading(true);
-      setError(null);
+      setIsProcessing(true);
+      const stripe = await stripePromise;
       
+      // Create checkout session
       const response = await checkout();
       
       if (response.success) {
-        setCart([]);
-        toast.success('Checkout successful!');
-        navigate('/orders');
+        // Redirect to Stripe checkout
+        const result = await stripe.redirectToCheckout({
+          sessionId: response.sessionId
+        });
+
+        if (result.error) {
+          toast.error(result.error.message);
+        }
       } else {
-        setError(response.error);
-        toast.error(response.error);
+        toast.error(response.error || 'Failed to process checkout');
       }
     } catch (error) {
-      console.error('Error during checkout:', error);
-      const status = getConnectionStatus();
-      const errorDetails = getErrorDetails(status);
-      setError(`Failed to process checkout${errorDetails}`);
-      toast.error(`Failed to process checkout${errorDetails}`);
+      console.error('Error processing checkout:', error);
+      toast.error('Failed to process checkout');
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
+  };
+
+  const getCartTotal = () => {
+    return cart.reduce((total, item) => total + item.price, 0);
+  };
+
+  const getCartCount = () => {
+    return cart.length;
   };
 
   return (
@@ -229,23 +228,25 @@ export function CartProvider({ children }) {
         cart,
         loading,
         error,
+        isProcessing,
         isOffline,
         addPetToCart,
         removePetFromCart,
         clearUserCart,
         processCheckout,
-        fetchCart
+        getCartTotal,
+        getCartCount
       }}
     >
       {children}
     </CartContext.Provider>
   );
-}
+};
 
-export function useCart() {
+export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
-} 
+}; 

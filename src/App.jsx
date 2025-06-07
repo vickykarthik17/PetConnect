@@ -17,6 +17,7 @@ import Contact from './pages/Contact';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { Toaster } from 'react-hot-toast';
+import TestAuth from './TestAuth';
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -94,6 +95,7 @@ function App() {
               },
             }}
           />
+          <TestAuth />
         </CartProvider>
       </AuthProvider>
     </Router>

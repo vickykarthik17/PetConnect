@@ -36,16 +36,27 @@ export const registerPet = async (petData) => {
   try {
     const formData = new FormData();
     
-    // Add pet data to FormData
-    Object.keys(petData).forEach(key => {
-      if (key === 'images') {
-        petData.images.forEach(image => {
-          formData.append('images', image);
-        });
-      } else {
-        formData.append(key, petData[key]);
-      }
-    });
+    // Create a separate object for pet data
+    const pet = {
+      name: petData.name,
+      species: petData.species,
+      breed: petData.breed,
+      age: parseInt(petData.age),
+      gender: petData.gender,
+      description: petData.description,
+      price: parseFloat(petData.price),
+      available: petData.available
+    };
+
+    // Add pet data as JSON string
+    formData.append('pet', new Blob([JSON.stringify(pet)], { type: 'application/json' }));
+
+    // Add images if present
+    if (petData.images && petData.images.length > 0) {
+      petData.images.forEach(image => {
+        formData.append('images', image);
+      });
+    }
 
     const response = await api.post('/pets', formData, {
       headers: {
