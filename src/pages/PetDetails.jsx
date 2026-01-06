@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Heart, ArrowLeft, Phone, Mail, MapPin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { getPetById, toggleFavorite } from '../api/petApi';
 import { toast } from 'react-hot-toast';
 
@@ -12,6 +13,7 @@ export function PetDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { addPetToCart, isProcessing, cart } = useCart();
 
   useEffect(() => {
     fetchPetDetails();
@@ -40,7 +42,7 @@ export function PetDetails() {
   const handleFavorite = async () => {
     if (!currentUser) {
       toast.error('Please login to add pets to favorites');
-      navigate('/auth');
+      navigate('/login');
       return;
     }
 
@@ -58,10 +60,19 @@ export function PetDetails() {
     }
   };
 
+  const handleAddToCart = async () => {
+    if (!pet || !pet.available) {
+      toast.error('This pet is not available');
+      return;
+    }
+
+    await addPetToCart(pet);
+  };
+
   const handleContact = (method) => {
     if (!currentUser) {
       toast.error('Please login to contact pet owners');
-      navigate('/auth');
+      navigate('/login');
       return;
     }
 
@@ -150,6 +161,24 @@ export function PetDetails() {
 
           {/* Contact Buttons */}
           <div className="space-y-4">
+            <button
+              onClick={handleAddToCart}
+              disabled={isProcessing || cart.some(item => item.id === pet.id)}
+              className={`w-full flex items-center justify-center gap-2 text-white py-3 px-4 rounded-lg transition-colors ${
+                !pet.available || cart.some(item => item.id === pet.id)
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : isProcessing
+                  ? 'bg-orange-300 cursor-wait'
+                  : 'bg-orange-500 hover:bg-orange-600'
+              }`}
+            >
+              {cart.some(item => item.id === pet.id)
+                ? 'Already in Cart'
+                : isProcessing
+                ? 'Adding...'
+                : 'Add to Cart'}
+            </button>
+
             <button
               onClick={() => handleContact('phone')}
               className="w-full flex items-center justify-center gap-2 bg-orange-500 text-white py-3 px-4 rounded-lg hover:bg-orange-600 transition-colors"

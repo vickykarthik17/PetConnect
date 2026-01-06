@@ -17,6 +17,7 @@ public class CorsConfig {
         
         // Allow specific origins
         config.addAllowedOrigin("http://localhost:5173"); // Vite dev server
+        config.addAllowedOrigin("http://localhost:5174"); // Alternate Vite port
         config.addAllowedOrigin("http://localhost:3000"); // Alternative dev port
         
         // Allow credentials

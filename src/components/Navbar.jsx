@@ -8,6 +8,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   
   const isActive = (path) => location.pathname === path;
   
@@ -66,28 +67,55 @@ export default function Navbar() {
             </button>
             
             {currentUser ? (
-              <div className="relative group">
-                <button className="flex items-center space-x-1 text-gray-700 hover:text-orange-500">
+              <div 
+                className="relative pb-2"
+                onMouseEnter={() => setUserMenuOpen(true)}
+                onMouseLeave={() => setUserMenuOpen(false)}
+              >
+                <button 
+                  className="flex items-center space-x-1 text-gray-700 hover:text-orange-500 focus:outline-none px-2 py-1 rounded"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                >
                   <User size={20} />
                   <span className="text-sm hidden sm:inline">{currentUser.username}</span>
                 </button>
                 
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden group-hover:block">
-                  <div className="px-4 py-2 text-sm text-gray-700 border-b">
-                    Signed in as <span className="font-medium">{currentUser.username}</span>
-                  </div>
-                  <Link to="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dashboard</Link>
-                  <Link to="/register-pet" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Register a Pet</Link>
-                  <button 
-                    onClick={handleLogout}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                {userMenuOpen && (
+                  <div 
+                    className="absolute right-0 w-48 bg-white rounded-md shadow-xl py-1 z-50 border border-gray-200"
+                    style={{ top: 'calc(100% + 4px)' }}
                   >
-                    Sign Out
-                  </button>
-                </div>
+                      <div className="px-4 py-2 text-sm text-gray-700 border-b">
+                        Signed in as <span className="font-medium">{currentUser.username}</span>
+                      </div>
+                      <Link 
+                        to="/dashboard" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                      <Link 
+                        to="/register-pet" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Register a Pet
+                      </Link>
+                      <button 
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          handleLogout();
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                )}
               </div>
             ) : (
-              <Link to="/auth" className="text-gray-700 hover:text-orange-500">
+              <Link to="/login" className="text-gray-700 hover:text-orange-500">
                 <User size={20} />
               </Link>
             )}
@@ -163,7 +191,7 @@ export default function Navbar() {
                 </>
               ) : (
                 <Link 
-                  to="/auth" 
+                  to="/login" 
                   className="text-gray-700 hover:text-orange-500 px-3 py-2 text-sm font-medium"
                   onClick={() => setMobileMenuOpen(false)}
                 >

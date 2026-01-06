@@ -6,12 +6,17 @@ import { toast } from 'react-hot-toast';
 import defaultPetImage from '../assets/default-pet.jpg';
 
 export default function PetCard({ pet, onFavoriteToggle, isFavorite }) {
-  const { addPetToCart, isProcessing } = useCart();
+  const { addPetToCart, isProcessing, cart } = useCart();
   const { currentUser } = useAuth();
 
   const handleMeetPet = async () => {
     if (!pet.available) {
       toast.error('Sorry, this pet is no longer available');
+      return;
+    }
+
+    if (cart.some(item => item.id === pet.id)) {
+      toast('This pet is already in your cart');
       return;
     }
 
@@ -72,10 +77,12 @@ export default function PetCard({ pet, onFavoriteToggle, isFavorite }) {
 
         <button
           onClick={handleMeetPet}
-          disabled={isProcessing || !pet.available}
+          disabled={isProcessing || !pet.available || cart.some(item => item.id === pet.id)}
           className={`w-full py-2 px-4 rounded-md text-white font-medium transition-colors duration-300 ${
             !pet.available
               ? 'bg-gray-400 cursor-not-allowed'
+              : cart.some(item => item.id === pet.id)
+              ? 'bg-green-500 cursor-not-allowed'
               : isProcessing
               ? 'bg-indigo-400 cursor-wait'
               : 'bg-indigo-600 hover:bg-indigo-700'
@@ -91,6 +98,8 @@ export default function PetCard({ pet, onFavoriteToggle, isFavorite }) {
             </span>
           ) : !pet.available ? (
             'Not Available'
+          ) : cart.some(item => item.id === pet.id) ? (
+            'In Cart'
           ) : (
             'Meet Pet'
           )}

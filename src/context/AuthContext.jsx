@@ -5,7 +5,7 @@ import { registerPet, getUserPets, getAllPets } from '../api/petApi';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
     const fetchUserProfile = async () => {
         try {
             const response = await api.get('/users/profile');
-            setUser(response.data);
+            setCurrentUser(response.data);
         } catch (error) {
             console.error('Error fetching user profile:', error);
             logout();
@@ -35,16 +35,27 @@ export const AuthProvider = ({ children }) => {
             const response = await api.post('/auth/login', credentials);
             const { token, refreshToken, user: userData } = response.data;
             
-            localStorage.setItem('token', token);
-            localStorage.setItem('refreshToken', refreshToken);
-            setUser(userData);
+            if (!token || !userData) {
+                throw new Error('Invalid response from server');
+            }
             
-            return { success: true };
+            localStorage.setItem('token', token);
+            if (refreshToken) {
+                localStorage.setItem('refreshToken', refreshToken);
+            }
+            localStorage.setItem('currentUser', JSON.stringify(userData));
+            setCurrentUser(userData);
+            
+            return { success: true, user: userData };
         } catch (error) {
             console.error('Login error:', error);
+            const errorMessage = error.response?.data?.error || 
+                               error.response?.data?.message || 
+                               error.message || 
+                               'Login failed. Please check your credentials.';
             return {
                 success: false,
-                error: error.response?.data?.message || 'Login failed'
+                error: errorMessage
             };
         }
     };
@@ -54,16 +65,27 @@ export const AuthProvider = ({ children }) => {
             const response = await api.post('/auth/register', userData);
             const { token, refreshToken, user: newUser } = response.data;
             
-            localStorage.setItem('token', token);
-            localStorage.setItem('refreshToken', refreshToken);
-            setUser(newUser);
+            if (!token || !newUser) {
+                throw new Error('Invalid response from server');
+            }
             
-            return { success: true };
+            localStorage.setItem('token', token);
+            if (refreshToken) {
+                localStorage.setItem('refreshToken', refreshToken);
+            }
+            localStorage.setItem('currentUser', JSON.stringify(newUser));
+            setCurrentUser(newUser);
+            
+            return { success: true, user: newUser };
         } catch (error) {
             console.error('Registration error:', error);
+            const errorMessage = error.response?.data?.error || 
+                               error.response?.data?.message || 
+                               error.message || 
+                               'Registration failed. Please try again.';
             return {
                 success: false,
-                error: error.response?.data?.message || 'Registration failed'
+                error: errorMessage
             };
         }
     };
@@ -71,16 +93,18 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
-        setUser(null);
+        localStorage.removeItem('currentUser');
+        setCurrentUser(null);
     };
 
     const value = {
-        user,
+        user: currentUser,
+        currentUser,
         loading,
         login,
         register,
         logout,
-        isAuthenticated: !!user,
+        isAuthenticated: !!currentUser,
         registerPet,
         getUserPets,
         getAllPets

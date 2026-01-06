@@ -25,18 +25,29 @@ function Contact() {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const res = await fetch('http://localhost:8082/api/contact', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
 
-    toast.success('Message sent successfully! We will get back to you soon.');
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      subject: '',
-      message: '',
-    });
-    setLoading(false);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send message');
+      }
+
+      toast.success(data.message || 'Message sent successfully! We will get back to you soon.');
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+    } catch (err) {
+      console.error('Contact form error:', err);
+      toast.error(err.message || 'Could not send message. Try again later.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const contactInfo = [
@@ -44,16 +55,18 @@ function Contact() {
       icon: <Phone className="text-orange-500" size={24} />,
       title: 'Phone',
       details: [
-        '+91 123 456 7890',
-        '+91 987 654 3210'
+        '+91 72879 82697',
+        '+91 93925 39589',
+        ''
       ]
     },
     {
       icon: <Mail className="text-orange-500" size={24} />,
       title: 'Email',
       details: [
-        'contact@petconnect.com',
-        'support@petconnect.com'
+        '2211CS030141@mallareddyuniversity.ac.in',
+        '2211CS030091@mallareddyuniversity.ac.in',
+        '2211CS030128@mallareddyuniversity.ac.in'
       ]
     },
     {
@@ -230,4 +243,4 @@ function Contact() {
   );
 }
 
-export default Contact; 
+export default Contact;

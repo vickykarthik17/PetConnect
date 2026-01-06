@@ -103,7 +103,7 @@ function HomePage() {
           </p>
           {!currentUser ? (
             <Link
-              to="/auth"
+              to="/signup"
               className="bg-orange-500 text-white px-8 py-3 rounded-lg font-medium hover:bg-orange-600 transition inline-flex items-center gap-2"
             >
               <Users size={20} />

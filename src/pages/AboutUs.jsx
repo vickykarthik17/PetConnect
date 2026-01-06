@@ -1,7 +1,6 @@
 import React from 'react';
 import { Heart, Users, Shield, Trophy, PawPrint, Globe, Home, Phone, Mail, MapPin, Calendar, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import teamMemberImage from '../assets/team-member.jpg';
 
 function AboutUs() {
   const stats = [
@@ -19,19 +18,19 @@ function AboutUs() {
       icon: <Calendar className="text-orange-500" size={24} />
     },
     {
-      year: '2021',
+      year: '2022',
       title: 'Digital Platform Launch',
       description: 'Launched our online platform to streamline pet adoption.',
       icon: <Globe className="text-orange-500" size={24} />
     },
     {
-      year: '2022',
-      title: 'National Expansion',
+      year: '2023',
+      title: 'Regional Expansion',
       description: 'Expanded operations to major cities across India.',
       icon: <MapPin className="text-orange-500" size={24} />
     },
     {
-      year: '2023',
+      year: '2024',
       title: 'Community Growth',
       description: 'Reached milestone of 1000+ successful adoptions.',
       icon: <Users className="text-orange-500" size={24} />
@@ -40,25 +39,22 @@ function AboutUs() {
 
   const team = [
     {
-      name: 'Mr.ikramarthik',
+      name: 'Mr.Vikramarthik',
       role: 'Founder & CEO',
-      image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80',
-      bio: 'Btechtudent',
+      bio: 'Btech Student',
       contact: { email: 'vkarthik560@gmail.com', phone: '+91 7287982697' }
     },
     {
       name: 'R.Saketh',
       role: 'Operations Director',
-      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80',
-      bio: 'BtechStudent',
+      bio: 'Btech Student',
       contact: { email: 'sakethramagiri86@gmail.com', phone: '+91 9392539589' }
     },
     {
       name: 'P.Sanjeevaao',
       role: 'Adoption Coordinator',
-      image: teamMemberImage,
-      bio: 'BtechStudent',
-      contact: { email: 'sanjeevaaop@gmail.com', phone: '+917995719821' }
+      bio: 'Btech Student',
+      contact: { email: 'sanjeevarao@gmail.com', phone: '+917995719821' }
     }
   ];
 
@@ -168,31 +164,22 @@ function AboutUs() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {team.map((member, index) => (
-            <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="aspect-w-4 aspect-h-3 relative">
-                <img
-                  src={member.image}
-                  alt={member.name}
-                  className="w-full h-full object-contain bg-gray-50"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-1">{member.name}</h3>
-                <p className="text-orange-500 font-medium mb-3">{member.role}</p>
-                <p className="text-gray-600 mb-4">{member.bio}</p>
-                <div className="space-y-2">
-                  <div className="flex items-center text-gray-600">
-                    <Mail className="w-4 h-4 mr-2" />
-                    <a href={`mailto:${member.contact.email}`} className="hover:text-orange-500">
-                      {member.contact.email}
-                    </a>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <Phone className="w-4 h-4 mr-2" />
-                    <a href={`tel:${member.contact.phone}`} className="hover:text-orange-500">
-                      {member.contact.phone}
-                    </a>
-                  </div>
+            <div key={index} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+              <h3 className="text-xl font-semibold text-gray-800 mb-1">{member.name}</h3>
+              <p className="text-orange-500 font-medium mb-3">{member.role}</p>
+              <p className="text-gray-600 mb-4">{member.bio}</p>
+              <div className="space-y-2">
+                <div className="flex items-center text-gray-600">
+                  <Mail className="w-4 h-4 mr-2" />
+                  <a href={`mailto:${member.contact.email}`} className="hover:text-orange-500">
+                    {member.contact.email}
+                  </a>
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <Phone className="w-4 h-4 mr-2" />
+                  <a href={`tel:${member.contact.phone}`} className="hover:text-orange-500">
+                    {member.contact.phone}
+                  </a>
                 </div>
               </div>
             </div>

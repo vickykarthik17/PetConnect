@@ -21,7 +21,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"}, allowCredentials = "true")
 public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
@@ -38,6 +38,15 @@ public class AuthController {
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request) {
         try {
             logger.info("Login attempt for email: {}", request.getEmail());
+            
+            // Check if user exists first
+            if (!userService.existsByEmail(request.getEmail())) {
+                logger.warn("Login failed - user not found: {}", request.getEmail());
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Invalid email or password",
+                    "status", "error"
+                ));
+            }
             
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
@@ -60,9 +69,16 @@ public class AuthController {
                 "error", "Invalid email or password",
                 "status", "error"
             ));
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            logger.error("User not found for email: {}", request.getEmail());
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Invalid email or password",
+                "status", "error"
+            ));
         } catch (Exception e) {
             logger.error("Login failed for email: " + request.getEmail(), e);
-            return ResponseEntity.badRequest().body(Map.of(
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
                 "error", "Login failed: " + e.getMessage(),
                 "status", "error"
             ));

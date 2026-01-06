@@ -58,18 +58,23 @@ export const getCart = async () => {
       saveCartLocally(cart);
       return {
         success: true,
-        cart
+        cart,
+        isOffline: false
       };
     },
-    () => ({
-      success: true,
-      cart: getFallbackCart(),
-      isOffline: true
-    })
+    () => {
+      // Only mark as offline if backend is confirmed unavailable
+      const isActuallyOffline = !isBackendAvailable();
+      return {
+        success: true,
+        cart: getFallbackCart(),
+        isOffline: isActuallyOffline
+      };
+    }
   );
 };
 
-export const addToCart = async (petId) => {
+export const addToCart = async (petId, petData = {}) => {
   return withBackendFallback(
     async () => {
       const response = await api.post('/cart/add', { petId });
@@ -83,7 +88,10 @@ export const addToCart = async (petId) => {
     () => {
       const localCart = getFallbackCart();
       if (!localCart.some(item => item.id === petId)) {
-        localCart.push({ id: petId });
+        localCart.push({
+          id: petId,
+          ...petData
+        });
         saveCartLocally(localCart);
       }
       return {
@@ -153,6 +161,7 @@ export const checkout = async () => {
     saveCartLocally([]);
     return {
       success: true,
+      sessionId: response.data?.sessionId,
       order: response.data
     };
   } catch (error) {

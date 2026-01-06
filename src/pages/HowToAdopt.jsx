@@ -16,7 +16,7 @@ function HowToAdopt() {
       title: 'Submit an Application',
       description: 'Fill out our adoption application with your information and preferences.',
       action: 'Start Application',
-      link: '/auth'
+    link: '/signup'
     },
     {
       icon: <Calendar className="text-orange-500" size={24} />,

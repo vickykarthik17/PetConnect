@@ -4,6 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,6 +20,7 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private final JwtTokenProvider tokenProvider;
     private final CustomUserDetailsService userDetailsService;
 
@@ -32,6 +35,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
+        String path = request.getRequestURI();
+        
+        // Skip JWT filter for public endpoints
+        if (path.startsWith("/api/auth/") || 
+            path.startsWith("/api/ping") || 
+            path.startsWith("/api/health") || 
+            path.startsWith("/api/contact") ||
+            path.equals("/error")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         try {
             String jwt = tokenProvider.resolveToken(request);
             

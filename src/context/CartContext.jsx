@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { loadStripe } from '@stripe/stripe-js';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { getCart, addToCart, removeFromCart, clearCart, checkout } from '../api/cartApi';
 import { startHealthCheck, isBackendAvailable, getConnectionStatus } from '../utils/backendHealth';
@@ -18,6 +18,7 @@ export const CartProvider = ({ children }) => {
   const [retryCount, setRetryCount] = useState(0);
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     let mounted = true;
@@ -94,26 +95,38 @@ export const CartProvider = ({ children }) => {
       
       if (response.success) {
         setCart(response.cart || []);
+        const wasOffline = isOffline;
         setIsOffline(response.isOffline || false);
         
-        if (response.isOffline) {
+        // Only show offline warning if:
+        // 1. We're actually offline (response.isOffline is true)
+        // 2. Backend health check confirms it's unavailable
+        // 3. We weren't already offline (to avoid repeated toasts)
+        if (response.isOffline && !isBackendAvailable() && !wasOffline) {
           const status = getConnectionStatus();
           const errorDetails = getErrorDetails(status);
-          toast(`Working in offline mode${errorDetails}. Last check: ${status.lastCheck ? new Date(status.lastCheck).toLocaleTimeString() : 'never'}`, {
+          const lastCheck = status.lastCheckTime ? new Date(status.lastCheckTime).toLocaleTimeString() : 'just now';
+          toast(`Working in offline mode${errorDetails}. Last check: ${lastCheck}`, {
             icon: '⚠️',
-            duration: 5000,
+            duration: 4000,
           });
         }
       } else {
         setError(response.error);
-        toast.error(response.error);
+        // Only show error toast if it's not a network/offline issue
+        if (!response.error?.includes('offline') && !response.error?.includes('network')) {
+          toast.error(response.error);
+        }
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
       const status = getConnectionStatus();
       const errorDetails = getErrorDetails(status);
       setError(`Failed to load cart${errorDetails}`);
-      toast.error(`Failed to load cart${errorDetails}`);
+      // Only show error if backend is confirmed unavailable
+      if (!isBackendAvailable()) {
+        toast.error(`Failed to load cart${errorDetails}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -126,9 +139,22 @@ export const CartProvider = ({ children }) => {
       return;
     }
 
+    // Prevent duplicate adds
+    if (cart.some(item => item.id === pet.id)) {
+      toast('This pet is already in your cart');
+      return;
+    }
+
     try {
       setIsProcessing(true);
-      const response = await addToCart(pet.id);
+      const response = await addToCart(pet.id, {
+        name: pet.name,
+        price: pet.price,
+        imageUrl: pet.imageUrls?.[0] || pet.imageUrl,
+        breed: pet.breed,
+        age: pet.age,
+        gender: pet.gender
+      });
       if (response.success) {
         setCart(response.cart);
         toast.success('Pet added to cart successfully!');
@@ -194,7 +220,7 @@ export const CartProvider = ({ children }) => {
       // Create checkout session
       const response = await checkout();
       
-      if (response.success) {
+      if (response.success && response.sessionId) {
         // Redirect to Stripe checkout
         const result = await stripe.redirectToCheckout({
           sessionId: response.sessionId
@@ -203,6 +229,9 @@ export const CartProvider = ({ children }) => {
         if (result.error) {
           toast.error(result.error.message);
         }
+      } else if (response.success && response.order) {
+        // Fallback: if backend returns order info instead of sessionId
+        toast.success('Order created successfully');
       } else {
         toast.error(response.error || 'Failed to process checkout');
       }

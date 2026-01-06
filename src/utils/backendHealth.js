@@ -20,17 +20,19 @@ const axiosInstance = axios.create({
 
 export const checkConnection = async () => {
   try {
+    lastCheckTime = new Date(); // Update check time before attempting
     const response = await axiosInstance.get('/api/ping');
     if (response.status === 200) {
       isHealthy = true;
       currentRetryDelay = INITIAL_RETRY_DELAY;
       retryCount = 0;
-      lastCheckTime = new Date();
       lastError = null;
       return true;
     }
+    isHealthy = false;
     return false;
   } catch (error) {
+    isHealthy = false;
     console.error('Backend connection check failed:', {
       status: error.response?.status,
       message: error.message,

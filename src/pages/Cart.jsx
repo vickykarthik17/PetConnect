@@ -2,10 +2,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { toast } from 'react-hot-toast';
 
 export function Cart() {
-  const { cart, loading, removePetFromCart, clearCartItems, processCheckout } = useCart();
+  const { cart, loading, removePetFromCart, clearUserCart, processCheckout, isProcessing, isOffline } = useCart();
   const navigate = useNavigate();
 
   const totalAmount = cart.reduce((total, item) => total + (item.price || 0), 0);
@@ -16,7 +15,7 @@ export function Cart() {
 
   const handleClearCart = async () => {
     if (window.confirm('Are you sure you want to clear your cart?')) {
-      await clearCartItems();
+      await clearUserCart();
     }
   };
 
@@ -34,6 +33,11 @@ export function Cart() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {isOffline && (
+        <div className="mb-4 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3">
+          You are in offline mode. Cart changes are saved locally and will sync when the server is reachable.
+        </div>
+      )}
       <button
         onClick={() => navigate('/pets')}
         className="mb-6 inline-flex items-center text-orange-500 hover:text-orange-600"
@@ -79,7 +83,8 @@ export function Cart() {
                   </div>
                   <button
                     onClick={() => handleRemove(pet.id)}
-                    className="p-2 text-red-500 hover:text-red-600"
+                    disabled={isProcessing}
+                    className={`p-2 ${isProcessing ? 'text-red-300 cursor-wait' : 'text-red-500 hover:text-red-600'}`}
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
@@ -89,7 +94,8 @@ export function Cart() {
               <div className="flex justify-end">
                 <button
                   onClick={handleClearCart}
-                  className="text-red-500 hover:text-red-600 text-sm"
+                  disabled={isProcessing}
+                  className={`text-sm ${isProcessing ? 'text-red-300 cursor-wait' : 'text-red-500 hover:text-red-600'}`}
                 >
                   Clear Cart
                 </button>
@@ -123,9 +129,10 @@ export function Cart() {
 
               <button
                 onClick={handleCheckout}
-                className="w-full bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600 transition-colors"
+                disabled={isProcessing}
+                className={`w-full text-white py-2 px-4 rounded-md transition-colors ${isProcessing ? 'bg-orange-300 cursor-wait' : 'bg-orange-500 hover:bg-orange-600'}`}
               >
-                Proceed to Checkout
+                {isProcessing ? 'Processing...' : 'Proceed to Checkout'}
               </button>
             </div>
           </div>

@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Header from './components/Header';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import { Auth } from './pages/Auth';
 import HomePage from './pages/HomePage';
 import Dashboard from './pages/Dashboard';
 import PetRegistration from './pages/PetRegistration';
@@ -14,6 +13,8 @@ import SuccessStories from './pages/SuccessStories';
 import Volunteer from './pages/Volunteer';
 import AboutUs from './pages/AboutUs';
 import Contact from './pages/Contact';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { Toaster } from 'react-hot-toast';
@@ -28,7 +29,7 @@ const ProtectedRoute = ({ children }) => {
   }
   
   if (!currentUser) {
-    return <Navigate to="/auth" />;
+    return <Navigate to="/login" />;
   }
   
   return children;
@@ -38,7 +39,9 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
-      <Route path="/auth" element={<Auth />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/auth" element={<Navigate to="/login" replace />} />
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <Dashboard />
