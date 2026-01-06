@@ -24,6 +24,8 @@ backend/target/
 .env.local
 .env.production
 .env.development
+# Allow .env.example (template file should be tracked)
+!.env.example
 
 # Editor directories and files
 .vscode/*
