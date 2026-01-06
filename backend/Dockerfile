@@ -4,8 +4,16 @@ FROM eclipse-temurin:17-jdk
 # Set working directory
 WORKDIR /app
 
-# Copy Maven wrapper and project files
-COPY . .
+# Copy Maven wrapper files first (for better caching)
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+
+# Make mvnw executable
+RUN chmod +x ./mvnw
+
+# Copy source code
+COPY src ./src
 
 # Build the application
 RUN ./mvnw clean package -DskipTests
