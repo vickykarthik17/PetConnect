@@ -41,6 +41,7 @@ Go to your Render service → **Environment** tab and add:
 ```
 PORT=8082
 MONGODB_URI=your_mongodb_atlas_connection_string
+MONGODB_DATABASE=petmanagement
 JWT_SECRET=your_secure_jwt_secret_minimum_64_characters
 CORS_ALLOWED_ORIGINS=https://your-vercel-app.vercel.app,https://your-custom-domain.com
 ADMIN_USERNAME=admin
@@ -171,6 +172,7 @@ Then restart your Render service.
 |----------|----------|-------------|
 | `PORT` | ✅ | Port number (Render sets this automatically) |
 | `MONGODB_URI` | ✅ | MongoDB Atlas connection string |
+| `MONGODB_DATABASE` | ✅ | MongoDB database name (default: petmanagement) |
 | `JWT_SECRET` | ✅ | Secure JWT secret (min 64 chars) |
 | `CORS_ALLOWED_ORIGINS` | ✅ | Comma-separated list of allowed origins |
 | `ADMIN_USERNAME` | ⚠️ | Admin username (optional, defaults to 'admin') |
