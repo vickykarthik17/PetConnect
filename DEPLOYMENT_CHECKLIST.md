@@ -172,7 +172,6 @@ Then restart your Render service.
 |----------|----------|-------------|
 | `PORT` | ✅ | Port number (Render sets this automatically) |
 | `MONGODB_URI` | ✅ | MongoDB Atlas connection string |
-| `MONGODB_DATABASE` | ✅ | MongoDB database name (default: petmanagement) |
 | `JWT_SECRET` | ✅ | Secure JWT secret (min 64 chars) |
 | `CORS_ALLOWED_ORIGINS` | ✅ | Comma-separated list of allowed origins |
 | `ADMIN_USERNAME` | ⚠️ | Admin username (optional, defaults to 'admin') |

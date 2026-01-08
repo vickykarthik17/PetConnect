@@ -25,8 +25,10 @@ function Contact() {
     e.preventDefault();
     setLoading(true);
 
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8082/api';
+
     try {
-      const res = await fetch('http://localhost:8082/api/contact', {
+      const res = await fetch(`${API_BASE_URL}/contact`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json'

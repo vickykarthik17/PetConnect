@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8082';
+// Use environment variable, fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8082/api';
 const INITIAL_RETRY_DELAY = 1000; // 1 second
 const MAX_RETRY_DELAY = 30000; // 30 seconds
 const MAX_RETRIES = 3;
@@ -13,7 +14,7 @@ let lastError = null;
 let lastCheckTime = null;
 
 const axiosInstance = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   timeout: 5000,
   withCredentials: true
 });
@@ -21,7 +22,7 @@ const axiosInstance = axios.create({
 export const checkConnection = async () => {
   try {
     lastCheckTime = new Date(); // Update check time before attempting
-    const response = await axiosInstance.get('/api/ping');
+    const response = await axiosInstance.get('/ping');
     if (response.status === 200) {
       isHealthy = true;
       currentRetryDelay = INITIAL_RETRY_DELAY;
